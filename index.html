@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adaptive Wireless Power Transfer — EE2025 Team 49</title>
+<meta name="description" content="Mapping coil coupling from transmitter current, then tuning (C1, f) around the coupled modes. EE2025 course project, IIT Madras.">
+<style>
+  /* ====== EDIT COLOURS HERE ====== */
+  :root{
+    --accent:#7a004b; --accent-soft:#f6eaf1; --ink:#1d1b1a; --ink2:#5b5552;
+    --bg:#fbfaf9; --card:#ffffff; --line:#e6e0e3;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --accent:#e07ab4; --accent-soft:#2a1822; --ink:#f1ecee; --ink2:#b8afb3;
+           --bg:#141113; --card:#1d191b; --line:#332c30; }
+    figure img{ background:#fff; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{background:linear-gradient(135deg,#4a0030,#7a004b);color:#fff;padding:48px 16px 40px;text-align:center}
+  header h1{margin:0 0 8px;font-size:clamp(28px,6vw,46px);line-height:1.15}
+  header p{margin:4px auto;max-width:760px;opacity:.92}
+  .authors{font-weight:600;margin-top:16px}
+  main{max-width:880px;margin:0 auto;padding:8px 16px 64px}
+  nav{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:20px 0 8px}
+  nav a{color:var(--accent);background:var(--accent-soft);padding:6px 14px;border-radius:999px;text-decoration:none;font-size:15px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:20px 0}
+  h2{margin:0 0 10px;font-size:24px;color:var(--accent)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:10px}
+  .kpi{background:var(--accent-soft);border-radius:12px;padding:14px}
+  .kpi b{display:block;font-size:28px;color:var(--accent);line-height:1.2}
+  .kpi span{font-size:14px;color:var(--ink2)}
+  figure{margin:18px 0}
+  figure img{width:100%;height:auto;border-radius:10px;border:1px solid var(--line)}
+  figcaption{font-size:14px;color:var(--ink2);margin-top:6px}
+  .two{display:grid;grid-template-columns:1fr;gap:12px}
+  @media (min-width:700px){ .two{grid-template-columns:1fr 1fr} }
+  ol li,ul li{margin:6px 0}
+  code,.eq{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px}
+  .eq{display:block;background:var(--accent-soft);padding:10px 12px;border-radius:8px;overflow-x:auto;margin:8px 0}
+  table{border-collapse:collapse;width:100%;font-size:15px}
+  th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left}
+  .refs{font-size:14px;color:var(--ink2)}
+  footer{text-align:center;color:var(--ink2);font-size:14px;padding:24px 16px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Adaptive Wireless Power Transfer</h1>
+  <p>Mapping coil coupling from transmitter current, then tuning (C1, f) around the coupled modes</p>
+  <p class="authors">Divyanshu Gedam (EE25B046) · Neev K Prajapati (EE25B088) · Neel Manoj Kaila (EE25B087)</p>
+  <p>EE2025 Engineering Electromagnetics · Dept. of Electrical Engineering, IIT Madras · Team 49</p>
+</header>
+
+<main>
+<nav>
+  <a href="#summary">Summary</a><a href="#results">Results</a><a href="#method">Method</a>
+  <a href="#physics">Physics</a><a href="#figures">More figures</a><a href="#refs">References</a>
+</nav>
+
+<!-- ====== SECTION: SUMMARY ====== -->
+<section id="summary">
+  <h2>In one minute</h2>
+  <p>When an EV charging pad is misaligned, the mutual inductance <i>M</i> between the coils changes, and a fixed-tuned charger either loses power or exceeds its current limits. We simulate a 3.3 kW, 85 kHz series–series link and adapt two transmitter-side knobs: a switched capacitor bank <b>C1</b> and the inverter frequency <b>f</b>. The receiver is unmodified and <i>M</i> is never measured directly.</p>
+  <p>Actuators move the receiver through 1,485 poses. Three low-power current readings per pose recover |M| to about 2%. We then solve for the two coupled-mode resonances analytically and probe only narrow windows around them, which gives the same power as an exhaustive sweep with about 13× fewer probes.</p>
+  <div class="kpis">
+    <div class="kpi"><b>13×</b><span>fewer probes per pose (123 / 143 vs 1,776)</span></div>
+    <div class="kpi"><b>1.4% / 2.1%</b><span>error in |M| recovered from transmitter current (circular / DD)</span></div>
+    <div class="kpi"><b>27 vs 108 min</b><span>commissioning time, including actuator moves</span></div>
+    <div class="kpi"><b>82% / 73%</b><span>mean power (% of rated), equal to or above the full sweep</span></div>
+  </div>
+</section>
+
+<!-- ====== SECTION: RESULTS ====== -->
+<section id="results">
+  <h2>Key results</h2>
+  <figure><img src="img/p_findings.jpg" alt="Delivered power vs lateral offset and probes per pose for both pads" loading="lazy">
+    <figcaption>Power vs misalignment for the proposed method, the full sweep and fixed tuning, plus the search effort of each method.</figcaption></figure>
+  <table>
+    <tr><th></th><th>Circular pad</th><th>DD pad</th></tr>
+    <tr><td>Probes per pose (proposed vs full)</td><td>123 vs 1,776</td><td>143 vs 1,776</td></tr>
+    <tr><td>Within 2% of full sweep</td><td>83% of poses</td><td>93% of poses</td></tr>
+    <tr><td>Fixed tuning acceptable</td><td>61% (72% ignoring ZVS)</td><td>13% (68% ignoring ZVS)</td></tr>
+    <tr><td>Shortfall vs true optimum (proposed / full)</td><td>1.2% / 1.3%</td><td>1.6% / 1.7%</td></tr>
+  </table>
+</section>
+
+<!-- ====== SECTION: METHOD ====== -->
+<section id="method">
+  <h2>How it works</h2>
+  <div class="two">
+    <div>
+      <ol>
+        <li><b>Source:</b> 230 V mains → rectifier → DC link → inverter at 79–90 kHz.</li>
+        <li><b>Map M(space):</b> actuators step x, y, gap and tilt. At each pose, |M| is fitted from the measured I1 phasor.</li>
+        <li><b>Predict the modes:</b> the mapped M goes into the resonance quadratic, giving two candidate frequencies per C1 state.</li>
+        <li><b>Probe narrowly:</b> sweep ±3 kHz around each mode, with a fallback near the receiver resonance.</li>
+        <li><b>Select and verify:</b> take the best safe (C1, f) within the I1, V<sub>C1</sub>, η and ZVS limits.</li>
+      </ol>
+    </div>
+    <figure><img src="img/p_flow.jpg" alt="Flowchart of the five-step algorithm" loading="lazy"></figure>
+  </div>
+  <figure><img src="img/p_landscape.jpg" alt="Measured (C1, f) power landscape with the mode-centred sweep windows" loading="lazy">
+    <figcaption>Measured (C1, f) landscape. Green bars are the proposed sweeps; hatched areas break a limit.</figcaption></figure>
+</section>
+
+<!-- ====== SECTION: PHYSICS ====== -->
+<section id="physics">
+  <h2>Governing physics</h2>
+  <p>At 85 kHz the wavelength is about 3.5 km, much larger than the 0.5 m pad, so the near field is magnetoquasistatic.</p>
+  <span class="eq">M = (μ0/4π) ∮∮ dl1·dl2 / |r1 − r2|   (Neumann)</span>
+  <span class="eq">Zin = Z1 + ω²M²/Z2,   PL = |I2|²RL</span>
+  <span class="eq">(L1L2 − M²)u² − (L1/C2 + L2/C1)u + 1/(C1C2) = 0,   u = ω²</span>
+  <div class="two">
+    <figure><img src="img/p_physics.jpg" alt="Coupling k vs lateral offset for circular and DD pads" loading="lazy">
+      <figcaption>True coupling vs lateral offset. The DD pad has a null near 120 mm in x.</figcaption></figure>
+    <figure><img src="img/p_mapping.jpg" alt="Estimated vs true mutual inductance" loading="lazy">
+      <figcaption>|M| recovered from transmitter current vs the hidden truth.</figcaption></figure>
+  </div>
+</section>
+
+<!-- ====== SECTION: MORE FIGURES ====== -->
+<section id="figures">
+  <h2>More figures</h2>
+  <figure><img src="img/fig04.jpg" alt="Coupling vs offset, gap and tilt for both pads" loading="lazy"><figcaption>Coupling vs each test parameter (x, y, gap, tilt), both pads.</figcaption></figure>
+  <figure><img src="img/fig08.jpg" alt="Delivered power maps over x and gap" loading="lazy"><figcaption>Delivered-power maps over x and gap: fixed, proposed, full sweep and difference.</figcaption></figure>
+  <figure><img src="img/fig10.jpg" alt="Method comparison" loading="lazy"><figcaption>Method comparison: probes, time, power, coverage, shortfall and limit violations.</figcaption></figure>
+  <figure><img src="img/fig14.jpg" alt="Magnetic field maps with ICNIRP contour" loading="lazy"><figcaption>B-field maps with the ICNIRP 27 µT contour.</figcaption></figure>
+</section>
+
+<!-- ====== SECTION: REFERENCES ====== -->
+<section id="refs">
+  <h2>References</h2>
+  <ol class="refs">
+    <li>A. Alkasir et al., “Analytical modeling of self- and mutual inductances of DD coils in WPT applications,” J. Electromagn. Eng. Sci., 22(2):162–170, 2022.</li>
+    <li>J. Xia, D. Wang, D. Xu, “A hybrid frequency adjusting method for the WPT system,” Electrical Engineering, 104:2679–2688, 2022.</li>
+    <li>J. Park et al., “Investigation of adaptive matching methods for near-field WPT,” IEEE Trans. Antennas Propag., 59(5):1769–1773, 2011.</li>
+    <li>Y. Lim et al., “An adaptive impedance-matching network based on a novel capacitor matrix for WPT,” IEEE Trans. Power Electron., 29(8):4403–4412, 2014.</li>
+    <li>F. W. Grover, Inductance Calculations, 1946; D. J. Griffiths, Introduction to Electrodynamics, 4th ed., 2017.</li>
+    <li>SAE J2954; ICNIRP Guidelines, Health Physics 99(6):818–836, 2010.</li>
+  </ol>
+</section>
+</main>
+
+<footer>EE2025 course project · IIT Madras · Simulation in Python (NumPy/SciPy)</footer>
+</body>
+</html>
