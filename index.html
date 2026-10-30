@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adaptive Wireless Power Transfer — EE2025 Team 49</title>
+<meta name="description" content="Mapping coil coupling from transmitter current, then tuning (C1, f) around the coupled modes. EE2025 course project, IIT Madras.">
+<style>
+  /* ====== EDIT COLOURS HERE ====== */
+  :root{
+    --accent:#7a004b; --accent-soft:#f6eaf1; --ink:#1d1b1a; --ink2:#5b5552;
+    --bg:#fbfaf9; --card:#ffffff; --line:#e6e0e3;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --accent:#e07ab4; --accent-soft:#2a1822; --ink:#f1ecee; --ink2:#b8afb3;
+           --bg:#141113; --card:#1d191b; --line:#332c30; }
+    figure img{ background:#fff; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{background:linear-gradient(135deg,#4a0030,#7a004b);color:#fff;padding:48px 16px 40px;text-align:center}
+  header h1{margin:0 0 8px;font-size:clamp(28px,6vw,46px);line-height:1.15}
+  header p{margin:4px auto;max-width:760px;opacity:.92}
+  .authors{font-weight:600;margin-top:16px}
+  main{max-width:880px;margin:0 auto;padding:8px 16px 64px}
+  nav{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:20px 0 8px}
+  nav a{color:var(--accent);background:var(--accent-soft);padding:6px 14px;border-radius:999px;text-decoration:none;font-size:15px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:20px 0}
+  h2{margin:0 0 10px;font-size:24px;color:var(--accent)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:10px}
+  .kpi{background:var(--accent-soft);border-radius:12px;padding:14px}
+  .kpi b{display:block;font-size:28px;color:var(--accent);line-height:1.2}
+  .kpi span{font-size:14px;color:var(--ink2)}
+  figure{margin:18px 0}
+  figure img{width:100%;height:auto;border-radius:10px;border:1px solid var(--line)}
+  figcaption{font-size:14px;color:var(--ink2);margin-top:6px}
+  .two{display:grid;grid-template-columns:1fr;gap:12px}
+  @media (min-width:700px){ .two{grid-template-columns:1fr 1fr} }
+  ol li,ul li{margin:6px 0}
+  code,.eq{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px}
+  .eq{display:block;background:var(--accent-soft);padding:10px 12px;border-radius:8px;overflow-x:auto;margin:8px 0}
+  table{border-collapse:collapse;width:100%;font-size:15px}
+  th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left}
+  .refs{font-size:14px;color:var(--ink2)}
+  footer{text-align:center;color:var(--ink2);font-size:14px;padding:24px 16px}
+
+  /* ====== SIMULATIONS ====== */
+  .viz-root{
+    --surface-1:#ffffff; --text-primary:#1d1b1a; --text-secondary:#5b5552; --text-muted:#8a8380; --grid:#e8e3e5;
+    --series-1:#2a78d6; --series-2:#eb6834; --series-3:#1baf7a; --good:#0ca30c; --critical:#d03b3b;
+    --seq-100:#cde2fb; --seq-200:#9ec5f4; --seq-300:#6da7ec; --seq-400:#3987e5; --seq-500:#256abf; --seq-600:#184f95; --seq-700:#0d366b;
+    --ground:#ece8e3; --ground-2:#b4ada6; --pit:#d9d3cc; --copper:#c47a2c; --pad-tx:#47434b; --pad-rx:#3d5266; --car:#7d8798;
+    --field-pos:#0b8f9c; --field-neg:#c2185b;
+  }
+  @media (prefers-color-scheme: dark){
+    .viz-root{
+      --surface-1:#1d191b; --text-primary:#f1ecee; --text-secondary:#c3bcbf; --text-muted:#958c90; --grid:#3a3236;
+      --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70;
+      --seq-100:#123a6e; --seq-200:#184f95; --seq-300:#256abf; --seq-400:#3987e5; --seq-500:#6da7ec; --seq-600:#9ec5f4; --seq-700:#cde2fb;
+      --ground:#2b2729; --ground-2:#5e575b; --pit:#211d1f; --copper:#e0954a; --pad-tx:#57525d; --pad-rx:#4f6a85; --car:#5b6475;
+      --field-pos:#3fd0dc; --field-neg:#ff6fae;
+    }
+  }
+  section.wide{width:min(1200px, calc(100vw - 32px)); margin-left:50%; transform:translateX(-50%)}
+  .lede{color:var(--ink2);margin-top:0}
+  .simtabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 16px}
+  .simtab{font:inherit;font-size:15px;font-weight:600;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:8px 14px;border-radius:10px;cursor:pointer}
+  .simtab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+  .simintro{margin:0 0 12px;color:var(--ink2)}
+  .simgrid{display:grid;grid-template-columns:1fr;gap:16px}
+  @media (min-width:900px){ .simgrid{grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr)} }
+  .simcol{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .simcol canvas, .chartwrap canvas{display:block;width:100%;border-radius:10px;border:1px solid var(--line);background:var(--surface-1);touch-action:none}
+  #bay-top{cursor:grab} .busy #bay-top{cursor:default}
+  .chartwrap{position:relative}
+  .tip{position:absolute;z-index:3;pointer-events:none;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:13px;line-height:1.4;box-shadow:0 4px 14px rgba(0,0,0,.15);max-width:260px}
+  .tip .muted,.muted{color:var(--ink2)} .tbad{color:var(--critical)} .tok{color:var(--good)}
+  .simside{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .ctl{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .ctl h3{margin:0 0 8px;font-size:15px}
+  .row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 10px;margin:8px 0;font-size:14px}
+  .row input[type=range]{grid-column:1 / -1;width:100%;accent-color:var(--accent)}
+  .row output{font-variant-numeric:tabular-nums;color:var(--ink2)}
+  .segm{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;flex-wrap:wrap}
+  .segm button{font:inherit;font-size:14px;border:0;background:transparent;color:var(--ink);padding:6px 11px;cursor:pointer}
+  .segm button[aria-pressed="true"]{background:var(--accent);color:#fff}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .btn{font:inherit;font-size:15px;font-weight:600;border-radius:10px;padding:9px 14px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .check{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:8px}
+  .status{font-size:14px;background:var(--accent-soft);border-radius:10px;padding:10px 12px;min-height:44px}
+  .stepper{display:flex;gap:6px;list-style:none;padding:0;margin:0 0 12px;flex-wrap:wrap;counter-reset:s}
+  .step{counter-increment:s;font-size:13px;padding:4px 10px 4px 6px;border-radius:999px;border:1px solid var(--line);color:var(--ink2);margin:0}
+  .step::before{content:counter(s);display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:var(--line);color:var(--ink);margin-right:6px;font-size:11px;font-weight:700}
+  .step.now{border-color:var(--accent);color:var(--ink);font-weight:600}
+  .step.now::before{background:var(--accent);color:#fff}
+  .step.done::before{content:"✓";background:var(--good);color:#fff}
+  dl.out{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:14px}
+  dl.out dt{color:var(--ink2)} dl.out dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+  .warn{color:var(--critical);font-size:13px;min-height:1em;margin-top:6px}
+  .cmp-row{font-size:13px;margin:8px 0}
+  .cmp-row .bar{height:10px;background:var(--grid);border-radius:4px;overflow:hidden;margin:3px 0}
+  .cmp-row .bar i{display:block;height:100%;background:var(--series-1);border-radius:0 4px 4px 0;transition:width .4s}
+  .cmp-row .v{font-weight:600;font-variant-numeric:tabular-nums}
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .tile{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .tile span{display:block;font-size:12px;color:var(--ink2)} .tile b{font-size:18px;font-variant-numeric:tabular-nums}
+  .badge{display:block;font-size:14px;font-weight:600;border-radius:10px;padding:8px 10px}
+  .badge.ok{background:rgba(12,163,12,.12);color:var(--good)} .badge.bad{background:rgba(208,59,59,.12);color:var(--critical)}
+  .note{font-size:13px;color:var(--ink2);margin:0}
+  .toolbar{display:flex;flex-direction:column;gap:8px}
+  .toolbar .btns{margin-top:0}
+  .legend-grad{height:10px;border-radius:4px;background:linear-gradient(90deg,var(--seq-100),var(--seq-300),var(--seq-500),var(--seq-700));margin:4px 0}
+  .legend-lab{display:flex;justify-content:space-between;font-size:12px;color:var(--ink2)}
+  .tablewrap{overflow-x:auto} #res-detail table{font-size:13px} #res-detail p{font-size:14px;margin:6px 0}
+  @media (max-width:520px){ section.wide{padding:16px 12px} .tiles{grid-template-columns:repeat(2,1fr)} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Adaptive Wireless Power Transfer</h1>
+  <p>Mapping coil coupling from transmitter current, then tuning (C1, f) around the coupled modes</p>
+  <p class="authors">Divyanshu Gedam (EE25B046) · Neev K Prajapati (EE25B088) · Neel Manoj Kaila (EE25B087)</p>
+  <p>EE2025 Engineering Electromagnetics · Dept. of Electrical Engineering, IIT Madras · Team 49</p>
+</header>
+
+<main>
+<nav>
+  <a href="#summary">Summary</a><a href="#simulations">Simulations</a><a href="#results">Results</a><a href="#method">Method</a>
+  <a href="#physics">Physics</a><a href="#figures">More figures</a><a href="#refs">References</a>
+</nav>
+
+<!-- ====== SECTION: SUMMARY ====== -->
+<section id="summary">
+  <h2>In one minute</h2>
+  <p>When an EV charging pad is misaligned, the mutual inductance <i>M</i> between the coils changes, and a fixed-tuned charger either loses power or exceeds its current limits. We simulate a 3.3 kW, 85 kHz series–series link and adapt two transmitter-side knobs: a switched capacitor bank <b>C1</b> and the inverter frequency <b>f</b>. The receiver is unmodified and <i>M</i> is never measured directly.</p>
+  <p>Actuators move the transmitter pad through 1,485 poses. Three low-power current readings per pose recover |M| to about 2%. We then solve for the two coupled-mode resonances analytically and probe only narrow windows around them, which gives the same power as an exhaustive sweep with about 13× fewer probes.</p>
+  <div class="kpis">
+    <div class="kpi"><b>13×</b><span>fewer probes per pose (123 / 143 vs 1,776)</span></div>
+    <div class="kpi"><b>1.4% / 2.1%</b><span>error in |M| recovered from transmitter current (circular / DD)</span></div>
+    <div class="kpi"><b>27 vs 108 min</b><span>commissioning time, including actuator moves</span></div>
+    <div class="kpi"><b>82% / 73%</b><span>mean power (% of rated), equal to or above the full sweep</span></div>
+  </div>
+</section>
+
+<!-- ====== SECTION: INTERACTIVE SIMULATIONS ====== -->
+<section id="simulations" class="wide viz-root">
+  <h2>Interactive simulations</h2>
+  <p class="lede">These run live in your browser on the same models as the project code: pad coupling from the Neumann-integral coil models, the series–series circuit with its component tolerances, 0.5% sensor noise, and the same limits and decision rule. The third tab shows the recorded results of the full 1,485-pose runs.</p>
+  <div class="simtabs" role="tablist" aria-label="Simulations">
+    <button class="simtab" role="tab" data-sim="bay" aria-selected="true">1 · Charging bay</button>
+    <button class="simtab" role="tab" data-sim="lab" aria-selected="false">2 · Resonance lab</button>
+    <button class="simtab" role="tab" data-sim="res" aria-selected="false">3 · Results explorer</button>
+  </div>
+
+  <!-- ---------- SIM 1: CHARGING BAY ---------- -->
+  <div class="simpanel" id="sim-bay" role="tabpanel">
+    <p class="simintro">Park the car anywhere in the bay by dragging it in the top view or using the sliders. The transmitter pad sits on an x–y stage with a lift. Press <b>Align &amp; tune</b>. The transmitter first locates the receiver from its own current, then moves under it and picks a lift height. Finally it tunes C1 and f around the predicted coupled modes.</p>
+    <ol class="stepper">
+      <li class="step" data-p="locate">Locate</li><li class="step" data-p="refine">Refine position</li>
+      <li class="step" data-p="lift">Lift</li><li class="step" data-p="tune">Tune (C1, f)</li><li class="step" data-p="charge">Charge</li>
+    </ol>
+    <div class="simgrid">
+      <div class="simcol">
+        <div class="toolbar">
+          <div class="btns">
+            <button class="btn primary" id="bay-go">▶ Align &amp; tune</button>
+            <button class="btn" id="bay-park">Random parking</button>
+            <button class="btn" id="bay-reset">Reset</button>
+          </div>
+          <div class="status" id="bay-status" aria-live="polite"></div>
+        </div>
+        <canvas id="bay-top" role="img" aria-label="Top view of the charging bay: transmitter pad on its stage and the car's receiver pad"></canvas>
+        <canvas id="bay-side" role="img" aria-label="Side view with the gap between the pads and animated magnetic field lines"></canvas>
+        <div class="chartwrap"><canvas id="bay-tune" role="img" aria-label="Measured power at each probed capacitor state and frequency"></canvas><div class="tip" id="bay-tip" hidden></div></div>
+        <p class="note">Field lines are a 2-D cross-section drawn from the live coil currents. All numbers come from the full 3-D coupling model.</p>
+      </div>
+      <aside class="simside">
+        <div class="ctl">
+          <h3>Setup</h3>
+          <div class="segm" id="bay-pad"><button data-v="circular" aria-pressed="true">Circular pad</button><button data-v="dd" aria-pressed="false">Double-D pad</button></div>
+          <label class="row">Car parked at x (along the car) <output id="bay-cx-v"></output><input type="range" id="bay-cx" min="-250" max="250" step="5"></label>
+          <label class="row">Car parked at y (across the car) <output id="bay-cy-v"></output><input type="range" id="bay-cy" min="-250" max="250" step="5"></label>
+          <label class="row">Ground clearance (gap at lift 0) <output id="bay-clear-v"></output><input type="range" id="bay-clear" min="100" max="250" step="5" value="175"></label>
+          <label class="row">Car tilt <output id="bay-tilt-v"></output><input type="range" id="bay-tilt" min="0" max="10" step="1" value="0"></label>
+          <label class="check"><input type="checkbox" id="bay-liftok" checked> Allow the transmitter to lift</label>
+          <div class="row" style="margin-top:10px">Playback speed <span></span></div>
+          <div class="segm" id="bay-speed"><button data-v="1" aria-pressed="false">1× real time</button><button data-v="10" aria-pressed="true">10×</button><button data-v="30" aria-pressed="false">30×</button></div>
+        </div>
+        <div class="ctl">
+          <h3>Required settings for maximum power transfer</h3>
+          <dl class="out">
+            <dt>Transmitter x</dt><dd id="o-txx"></dd><dt>Transmitter y</dt><dd id="o-txy"></dd>
+            <dt>Transmitter lift</dt><dd id="o-lift"></dd><dt>Air gap</dt><dd id="o-gap"></dd>
+            <dt>Coupling k</dt><dd id="o-k"></dd>
+            <dt>C1 bank state</dt><dd id="o-c1"></dd><dt>Inverter frequency f</dt><dd id="o-f"></dd>
+            <dt>Delivered power</dt><dd id="o-p"></dd><dt>Efficiency</dt><dd id="o-eta"></dd>
+            <dt>Transmitter current I1</dt><dd id="o-i1"></dd><dt>Capacitor voltage V<sub>C1</sub></dt><dd id="o-vc1"></dd>
+            <dt>Mapped |M|</dt><dd id="o-mmap"></dd><dt>Measurements</dt><dd id="o-probes"></dd><dt>Commissioning time</dt><dd id="o-time"></dd>
+          </dl>
+          <div class="warn" id="o-warn"></div>
+        </div>
+        <div class="ctl">
+          <h3>Power delivered for this parking position</h3>
+          <div class="cmp-row"><div>Fixed tuning, transmitter at home</div><div class="bar"><i></i></div><div class="v"></div></div>
+          <div class="cmp-row"><div>Best (C1, f), transmitter at home</div><div class="bar"><i></i></div><div class="v"></div></div>
+          <div class="cmp-row"><div>Transmitter positioned + (C1, f) tuned</div><div class="bar"><i></i></div><div class="v"></div></div>
+          <p class="note">Bars run from 0 to 3.3 kW (rated).</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ---------- SIM 2: RESONANCE LAB ---------- -->
+  <div class="simpanel" id="sim-lab" role="tabpanel" hidden>
+    <p class="simintro">Set the misalignment, then turn the two knobs yourself: the C1 bank state and the inverter frequency. Watch the currents on the oscilloscope, the field between the pads and the power curve with its two coupled-mode peaks. Click the curve to jump to a frequency, or let <b>Best (C1, f)</b> find the optimum.</p>
+    <div class="simgrid">
+      <div class="simcol">
+        <canvas id="lab-scope" role="img" aria-label="Oscilloscope showing inverter voltage, transmitter current and receiver current"></canvas>
+        <canvas id="lab-field" role="img" aria-label="Animated magnetic field lines between the two pads"></canvas>
+        <div class="chartwrap"><canvas id="lab-pf" role="img" aria-label="Delivered power versus frequency with the coupled-mode frequencies marked"></canvas><div class="tip" id="lab-tip" hidden></div></div>
+      </div>
+      <aside class="simside">
+        <div class="ctl">
+          <h3>Pads and alignment</h3>
+          <div class="segm" id="lab-pad"><button data-v="circular" aria-pressed="true">Circular pad</button><button data-v="dd" aria-pressed="false">Double-D pad</button></div>
+          <label class="row">Relative offset x <output id="lab-x-v"></output><input type="range" id="lab-x" min="0" max="250" step="5" value="60"></label>
+          <label class="row">Air gap <output id="lab-gap-v"></output><input type="range" id="lab-gap" min="50" max="250" step="5" value="150"></label>
+        </div>
+        <div class="ctl">
+          <h3>Tuning knobs</h3>
+          <label class="row">C1 bank state <output id="lab-b-v"></output><input type="range" id="lab-b" min="1" max="16" step="1" value="8"></label>
+          <label class="row">Inverter frequency f <output id="lab-f-v"></output><input type="range" id="lab-f" min="79" max="90" step="0.1" value="85"></label>
+          <div class="btns"><button class="btn primary" id="lab-best">Best (C1, f)</button><button class="btn" id="lab-fixed">Fixed tuning</button></div>
+          <label class="check"><input type="checkbox" id="lab-slow" checked> Slow motion</label>
+        </div>
+        <div class="tiles">
+          <div class="tile"><span>Coupling k</span><b id="lab-k"></b></div>
+          <div class="tile"><span>Power</span><b id="lab-p"></b></div>
+          <div class="tile"><span>Efficiency</span><b id="lab-eta"></b></div>
+          <div class="tile"><span>I1</span><b id="lab-i1"></b></div>
+          <div class="tile"><span>V<sub>C1</sub></span><b id="lab-vc1"></b></div>
+          <div class="tile"><span>Phase φ</span><b id="lab-phi"></b></div>
+        </div>
+        <div id="lab-state" class="badge ok" aria-live="polite"></div>
+        <p class="note">Limits: I1 ≤ 25 A, V<sub>C1</sub> ≤ 3 kV, η ≥ 85 %, 0° ≤ φ ≤ 60° (soft switching), power ≤ 1.05 × rated. Values are at full inverter duty without derating.</p>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ---------- SIM 3: RESULTS EXPLORER ---------- -->
+  <div class="simpanel" id="sim-res" role="tabpanel" hidden>
+    <p class="simintro">Every cell is one recorded pose from the 1,485-pose run of each pad: the true outcome of the setting each method chose. Pick a slice, then tap a cell for its |M| map value, chosen C1 and f, and probe count.</p>
+    <div class="simgrid">
+      <div class="simcol">
+        <div class="chartwrap"><canvas id="res-heat" role="img" aria-label="Heatmap of delivered power over relative offset and air gap"></canvas><div class="tip" id="res-tip" hidden></div></div>
+        <div><div class="legend-grad"></div><div class="legend-lab"><span>0 kW</span><span>delivered power (capped at rated)</span><span>3.3 kW</span></div><p class="note">Grey cells: no setting meets every limit at that pose.</p></div>
+        <p class="note" id="res-sum"></p>
+      </div>
+      <aside class="simside">
+        <div class="ctl">
+          <h3>Slice</h3>
+          <div class="row">Pad</div><div class="segm" id="res-pad"><button data-v="circular" aria-pressed="true">Circular</button><button data-v="dd" aria-pressed="false">Double-D</button></div>
+          <div class="row">Method</div><div class="segm" id="res-method"><button data-v="mode" aria-pressed="true">Proposed</button><button data-v="full" aria-pressed="false">Full sweep</button><button data-v="fixed" aria-pressed="false">Fixed tuning</button></div>
+          <div class="row">Tilt</div><div class="segm" id="res-tilt"><button data-v="0" aria-pressed="true">0°</button><button data-v="5" aria-pressed="false">5°</button><button data-v="10" aria-pressed="false">10°</button></div>
+          <div class="row">Relative offset y</div><div class="segm" id="res-y"><button data-v="0" aria-pressed="true">0</button><button data-v="50" aria-pressed="false">50</button><button data-v="100" aria-pressed="false">100</button><button data-v="150" aria-pressed="false">150</button><button data-v="200" aria-pressed="false">200 mm</button></div>
+        </div>
+        <div class="ctl" id="res-detail"></div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION: RESULTS ====== -->
+<section id="results">
+  <h2>Key results</h2>
+  <figure><img src="img/p_findings.jpg" alt="Delivered power vs lateral offset and probes per pose for both pads" loading="lazy">
+    <figcaption>Power vs misalignment for the proposed method, the full sweep and fixed tuning, plus the search effort of each method.</figcaption></figure>
+  <table>
+    <tr><th></th><th>Circular pad</th><th>DD pad</th></tr>
+    <tr><td>Probes per pose (proposed vs full)</td><td>123 vs 1,776</td><td>143 vs 1,776</td></tr>
+    <tr><td>Within 2% of full sweep</td><td>83% of poses</td><td>93% of poses</td></tr>
+    <tr><td>Fixed tuning acceptable</td><td>61% (72% ignoring ZVS)</td><td>13% (68% ignoring ZVS)</td></tr>
+    <tr><td>Shortfall vs true optimum (proposed / full)</td><td>1.2% / 1.3%</td><td>1.6% / 1.7%</td></tr>
+  </table>
+</section>
+
+<!-- ====== SECTION: METHOD ====== -->
+<section id="method">
+  <h2>How it works</h2>
+  <div class="two">
+    <div>
+      <ol>
+        <li><b>Source:</b> 230 V mains → rectifier → DC link → inverter at 79–90 kHz.</li>
+        <li><b>Map M(space):</b> the transmitter's actuators step x, y, gap and tilt. At each pose, |M| is fitted from the measured I1 phasor.</li>
+        <li><b>Predict the modes:</b> the mapped M goes into the resonance quadratic, giving two candidate frequencies per C1 state.</li>
+        <li><b>Probe narrowly:</b> sweep ±3 kHz around each mode, with a fallback near the receiver resonance.</li>
+        <li><b>Select and verify:</b> take the best safe (C1, f) within the I1, V<sub>C1</sub>, η and ZVS limits.</li>
+      </ol>
+    </div>
+    <figure><img src="img/p_flow.jpg" alt="Flowchart of the five-step algorithm" loading="lazy"></figure>
+  </div>
+  <figure><img src="img/p_landscape.jpg" alt="Measured (C1, f) power landscape with the mode-centred sweep windows" loading="lazy">
+    <figcaption>Measured (C1, f) landscape. Green bars are the proposed sweeps; hatched areas break a limit.</figcaption></figure>
+</section>
+
+<!-- ====== SECTION: PHYSICS ====== -->
+<section id="physics">
+  <h2>Governing physics</h2>
+  <p>At 85 kHz the wavelength is about 3.5 km, much larger than the 0.5 m pad, so the near field is magnetoquasistatic.</p>
+  <span class="eq">M = (μ0/4π) ∮∮ dl1·dl2 / |r1 − r2|   (Neumann)</span>
+  <span class="eq">Zin = Z1 + ω²M²/Z2,   PL = |I2|²RL</span>
+  <span class="eq">(L1L2 − M²)u² − (L1/C2 + L2/C1)u + 1/(C1C2) = 0,   u = ω²</span>
+  <div class="two">
+    <figure><img src="img/p_physics.jpg" alt="Coupling k vs lateral offset for circular and DD pads" loading="lazy">
+      <figcaption>True coupling vs lateral offset. The DD pad has a null near 120 mm in x.</figcaption></figure>
+    <figure><img src="img/p_mapping.jpg" alt="Estimated vs true mutual inductance" loading="lazy">
+      <figcaption>|M| recovered from transmitter current vs the hidden truth.</figcaption></figure>
+  </div>
+</section>
+
+<!-- ====== SECTION: MORE FIGURES ====== -->
+<section id="figures">
+  <h2>More figures</h2>
+  <figure><img src="img/fig04.jpg" alt="Coupling vs offset, gap and tilt for both pads" loading="lazy"><figcaption>Coupling vs each test parameter (x, y, gap, tilt), both pads.</figcaption></figure>
+  <figure><img src="img/fig08.jpg" alt="Delivered power maps over x and gap" loading="lazy"><figcaption>Delivered-power maps over x and gap: fixed, proposed, full sweep and difference.</figcaption></figure>
+  <figure><img src="img/fig10.jpg" alt="Method comparison" loading="lazy"><figcaption>Method comparison: probes, time, power, coverage, shortfall and limit violations.</figcaption></figure>
+  <figure><img src="img/fig14.jpg" alt="Magnetic field maps with ICNIRP contour" loading="lazy"><figcaption>B-field maps with the ICNIRP 27 µT contour.</figcaption></figure>
+</section>
+
+<!-- ====== SECTION: REFERENCES ====== -->
+<section id="refs">
+  <h2>References</h2>
+  <ol class="refs">
+    <li>A. Alkasir et al., “Analytical modeling of self- and mutual inductances of DD coils in WPT applications,” J. Electromagn. Eng. Sci., 22(2):162–170, 2022.</li>
+    <li>J. Xia, D. Wang, D. Xu, “A hybrid frequency adjusting method for the WPT system,” Electrical Engineering, 104:2679–2688, 2022.</li>
+    <li>J. Park et al., “Investigation of adaptive matching methods for near-field WPT,” IEEE Trans. Antennas Propag., 59(5):1769–1773, 2011.</li>
+    <li>Y. Lim et al., “An adaptive impedance-matching network based on a novel capacitor matrix for WPT,” IEEE Trans. Power Electron., 29(8):4403–4412, 2014.</li>
+    <li>F. W. Grover, Inductance Calculations, 1946; D. J. Griffiths, Introduction to Electrodynamics, 4th ed., 2017.</li>
+    <li>SAE J2954; ICNIRP Guidelines, Health Physics 99(6):818–836, 2010.</li>
+  </ol>
+</section>
+</main>
+
+<footer>EE2025 course project · IIT Madras · Simulation in Python (NumPy/SciPy) · Interactive simulations in JavaScript</footer>
+<script src="js/data.js"></script>
+<script src="js/physics.js"></script>
+<script src="js/sims.js"></script>
+</body>
+</html>
